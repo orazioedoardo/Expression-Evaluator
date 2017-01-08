@@ -1,4 +1,4 @@
-# Expression-Evaluator
+# Expression Evaluator
 Evaluate a mathematical expression by using the [Shunting-yard algorithm](https://en.wikipedia.org/wiki/Shunting-yard_algorithm) to parse the input into a [Reverse Polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation).
 
 ### Example
