@@ -1,24 +1,51 @@
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 #include <iomanip>
 #include <limits>
 #include <vector>
 #include <cmath>
+#include <map>
 
 #define PI_VALUE "3.1415926535897932385"
-#define E_VALUE "2.7182818284590452354"
+#define  E_VALUE "2.7182818284590452354"
 
 using namespace std;
+
+double add(double x, double y){return x+y;}
+double sub(double x, double y){return x-y;}
+double mul(double x, double y){return x*y;}
+double div(double x, double y){return x/y;}
+double logb(double x, double y){return log(y)/log(x);}
+double neg(double x){return -1*x;}
+double fact(double x){return tgamma(x+1);}
+
+typedef double (*calc1)(double);
+typedef double (*calc2)(double, double);
+typedef vector <pair<string, string>> pairs;
+
+//Map a character to a function pointer, map1 is used for functions and operators
+//which take one double, map2 for those who take two doubles
+
+map <char, calc1> map1 = {{'a',  abs}, {'b',  log}, {'c', sqrt}, {'d', asin},
+                          {'f', acos}, {'g', atan}, {'h',  sin}, {'i',  cos},
+                          {'j',  tan}, {'k',  neg}, {'l', fact}};
+                            
+map <char, calc2> map2 = {{'+', add}, {'-',  sub}, {'*',  mul}, {'/', div},
+                          {'^', pow}, {'%', fmod}, {'m', logb}};
+
+//Vectors of pairs containing substitutions
+
+pairs func = {{"abs",  "a"}, {"ln",   "b"}, {"sqrt", "c"}, {"asin", "d"}, 
+              {"acos", "f"}, {"atan", "g"}, {"sin",  "h"}, {"cos",  "i"},
+              {"tan",  "j"}, {"log",  "m"}};
+
+pairs other = {{"!", "l"}, {"[", "("}, {"]", ")"}, {"{", "("}, {"}", ")"},
+               {"pi", PI_VALUE}, {"e", E_VALUE}};
 
 vector <string> op_stack;
 vector <string> rpn_stack;
 vector <double> out_stack;
-
-//Available functions along with their ids
-vector <string> avail = {"abs", "ln", "sqrt", "asin", "acos", 
-						 "atan", "sin", "cos", "tan", "log"};
-vector <string> ids = {"a", "b", "c", "d", "f", 
-					   "g", "h", "i", "j", "m"};
 
 template <typename T> void push(T o, vector <T> &s){
 	s.push_back(o);
@@ -29,7 +56,6 @@ template <typename T> void pop(T &o, vector <T> &s){
 	s.pop_back();
 }
 
-//Operators' precedence
 int get_prec(char c){
 	switch(c){
 		case 'l': return 5; //Factorial operator
@@ -48,71 +74,60 @@ bool num(char c){
 	return ((c >= 48 && c <= 57) || c == '.') ? true : false;
 }
 
-//Compare c against ids list
+//Determine if a charater corresponds to a function
+
 bool is_func(char c){
 	string o;
-	for (int w = 0; w < ids.size(); w++){
-		o = ids.at(w);
+	for (int w = 0; w < func.size(); w++){
+		o = func.at(w).second;
 		if (c == o.at(0)) return true;
 	}
 	return false;
 }
 
+//Replace unary operators '-' and '+' to prevent ambiguity
+
 void replace_una(char from, char to, string &m){
-	char u;
+	int p, i;
 	if (m.at(0) == from) m.at(0) = to;
-	for (int i = 1; i < m.length(); i++){
+	for (i = 1; i < m.length(); i++){
 		if (m.at(i) == from){
-			for (int p = i-1; p > 0; p--){
-				u = m.at(p);
-				if ((get_prec(u) >= 1) || (u == '(')){
-					m.at(i) = to;
-					break;
-				} else if (num(u)){
-					break;
-				}				
+			for (p = i-1; p > 0; p--){
+				if (m.at(p) != ' ') break;
+			}
+			char u = m.at(p);
+			if ((get_prec(u) >= 1 && get_prec(u) <= 4) || (u == '(')){
+				m.at(i) = to;
 			}
 		}
 	}
 }
 
-//Replace functions names with their corresponding ids
-void replace_func(string &s){
+//Replace occurrences of items of a vector in a given string
+
+void replace(pairs v, string &s){
 	int begin;
-	string from, to;
-	for (int w = 0; w < avail.size(); w++){
-		from = avail.at(w);
-		to = ids.at(w);
+	string src, dst;
+	for (int w = 0; w < v.size(); w++){
+		src = v.at(w).first;
+		dst = v.at(w).second;
 		for (int i = 0; i < s.length(); i++){
-			begin = s.find(from, i);
-			if (begin == -1){
-				break;
-			}
-			s.replace(begin, from.length(), to);
+			begin = s.find(src, i);
+			if (begin == -1) break;
+			s.replace(begin, src.length(), dst);
 			i += begin;
 		}  
 	}
 }
 
-//Generic string replacement
-void replace_str(string from, string to, string &s){
-	int begin;
-	for (int i = 0; i < s.length(); i++){
-		begin = s.find(from, i);
-		if (begin == -1){
-			break;
-		}
-		s.replace(begin, from.length(), to);
-		i += begin;
-	}  
-}
+//Obtain a double (as a string) at a p offest inside a string 
+//and move it to p + double length
 
 string get_str(int &p, string v){
 	string tot;
-	v += " ";
-	for (int i = p; num(v.at(i)); i++){
+	for (int i = p; i < v.length(); i++){
 		tot += v.at(i);
-		if (!num(v.at(i+1))){
+		if ((i == v.length()-1) || !num(v.at(i+1))){
 			p = i;
 			break;
 		}
@@ -120,9 +135,22 @@ string get_str(int &p, string v){
 	return tot;
 }
 
+void fail(){
+	cout << "Invalid expression (use -h to show the help)" << endl;
+	exit(1);
+}
+
+//Obtain a double at a p offest inside a string and move it to 
+//p + double length
+
 double get_double(int &p, string v){
 	size_t i;
-	double tot = stod(&v.at(p), &i);
+	double tot;
+	try {
+		tot = stod(&v.at(p), &i);
+	} catch (invalid_argument){
+		fail();
+	}
 	p += i;
 	return tot;
 }
@@ -145,62 +173,51 @@ void show_out(bool v){
 
 int main(int argc, char * argv[]){
 	
-	string r0, r1;
-	char c0, c1, c2;
+	string r0, r1, r2;
 	double l0, l1, l2;
 
 	string in;
 	cout << "Expression: ";
 	getline(cin, in);
 
-	replace_func(in);
+	if (in.length() == 0) fail();
 
-	//Replace unary operators, es. +2 * -8 -> 2 * k8
-	//It's necessary to prevent ambiguity with the '-' and '+' operator
+	replace(func, in);
+	replace(other, in);
+
 	replace_una('-', 'k', in);
 	replace_una('+', 0, in);
 
-	replace_str("pi", PI_VALUE, in);
-	replace_str("e", E_VALUE, in);
-
-	replace_str("!", "l", in);
-
-	replace_str("[", "(", in);
-	replace_str("]", ")", in);
-	replace_str("{", "(", in);
-	replace_str("}", ")", in);
-
 	bool v = false;
-	if ((argc >= 2) && (strcmp(argv[1], "-v") == 0)){
-		v = true;
-	}
+	if ((argc >= 2) && (strcmp(argv[1], "-v") == 0)) v = true;
 	
-	if(v) cout << "Input: " << in << endl;
+	if (v) cout << "Input: " << in << endl;
 
 	for (int i = 0; i < in.length(); i++){
 
 		r0 = in.at(i);
-		c0 = r0.at(0);
 
-		if (num(c0)){
+		//If r0 is a number, push it onto rpn_stack
 
-			//Get the current number and move the index i
-			//to i + length of the number
+		if (num(r0.at(0))){
+
 			r0 = get_str(i, in);
 			push(r0, rpn_stack);
 			show_rpn(v);
 
 		} else {
 
-			//Handle left associativity
-			if ((get_prec(c0) >= 1) && (get_prec(c0) <= 3)){
+			//If it isn't a number it's either an operator, a function, or
+			//a parenthesis.
 
-				//While op_stack contains operators, if c0's precedence
-				//is <= than c1's precedence, move r1 (operator) to rpn_stack
-				for (int i = op_stack.size(); i > 0; i--){
+			//If r0 is left associative and its precedence is <= to that of
+			//r1, mode r1 to rpn_stack (for every operator from op_stack)
+
+			if ((get_prec(r0.at(0)) >= 1) && (get_prec(r0.at(0)) <= 3)){
+
+				for (string i : op_stack){
 					r1 = op_stack.back();
-					c1 = r1.at(0);
-					if (get_prec(c0) <= get_prec(c1)){
+					if (get_prec(r0.at(0)) <= get_prec(r1.at(0))){
 						pop(r1, op_stack);
 						push(r1, rpn_stack);
 						show_rpn(v);
@@ -209,15 +226,14 @@ int main(int argc, char * argv[]){
 				push(r0, op_stack);
 				show_rpn(v);
 
-			//Handle right associativity
-			} else if (get_prec(c0) >= 4){
+			//If r0 is right associative and its precedence is < to that of
+			//r1, mode r1 to rpn_stack (for every operator from op_stack)
 
-				//While op_stack contains operators, if c0's precedence
-				//is < than c1's precedence, move r1 (operator) to rpn_stack
-				for (int i = op_stack.size(); i > 0; i--){
+			} else if (get_prec(r0.at(0)) >= 4){
+
+				for (string i : op_stack){
 					r1 = op_stack.back();
-					c1 = r1.at(0);
-					if (get_prec(c0) < get_prec(c1)){
+					if (get_prec(r0.at(0)) < get_prec(r1.at(0))){
 						pop(r1, op_stack);
 						push(r1, rpn_stack);
 						show_rpn(v);
@@ -226,47 +242,60 @@ int main(int argc, char * argv[]){
 				push(r0, op_stack);
 				show_rpn(v);
 
-			} else if ((c0 == '(') || is_func(c0)){
+			//Push '(' and functions (as characters) to op_stack
+
+			} else if ((r0.at(0) == '(') || is_func(r0.at(0))){
 
 				push(r0, op_stack);
 				show_rpn(v);
 
-			} else if (c0 == ')'){
+			} else if (r0.at(0) == ')'){
 
-				//Until at the top of op_stack a '(' is found, move
-				//r1 (operator) to rpn_stack
-				for (int i = op_stack.size(); i > 0; i--){
+				//Move operators from op_stack to rpn_stack until '(' is found
+
+				bool found = false;
+				for (string i : op_stack){
 					r1 = op_stack.back();
-					c1 = r1.at(0);
-					if (c1 != '('){
+					if (r1.at(0) != '('){
 						pop(r1, op_stack);
 						push(r1, rpn_stack);
 						show_rpn(v);
 					}
 				}
-				pop(r1, op_stack);
-				show_rpn(v);
+
+				//Then pop it outside op_stack
+
+				if (!op_stack.empty()){
+					if (r1.at(0) == '('){
+						found = true;
+						pop(r1, op_stack);
+						show_rpn(v);
+					}
+				}
+
+				//Move functions from op_stack to rpn_stack
 
 				if (!op_stack.empty()){
 					r1 = op_stack.back();
-					c1 = r1.at(0);
-
-					//If the top of op_stack contains a function, move
-					//it to rpn_stack
-					if (is_func(c1)){
+					if (is_func(r1.at(0))){
 						pop(r1, op_stack);
 						push(r1, rpn_stack);
 						show_rpn(v);
 					}
 				}
 
-			} else if (c0 == ','){
+				//If '(' hasn't been found, then there are mismatched
+				//parenthesis
 
-				//Same as if c0 was a '('
-				for (int i = op_stack.size(); i > 0; i--){
+				if (!found) fail();
+
+			} else if (r0.at(0) == ','){
+
+				//Move operators from op_stack to rpn_stack
+
+				for (string i : op_stack){
 					r1 = op_stack.back();
-					c1 = r1.at(0);
-					if (c1 != '('){
+					if (r1.at(0) != '('){
 						pop(r1, op_stack);
 						push(r1, rpn_stack);
 						show_rpn(v);
@@ -276,13 +305,16 @@ int main(int argc, char * argv[]){
 		}
 	}
 
-	//Move remaining operators from op_stack to rpn_stack
+	//Move remaining operators from op_stack to rpn_stack, if parenthesis are found,
+	//then there are mismatched ones
+
 	for (string i : op_stack){
+		r2 = op_stack.back();
+		if ((r2.at(0) == '(') || (r2.at(0) == ')')) fail();
 		pop(r1, op_stack);
 		push(r1, rpn_stack);
 	}
 
-	//Create Reverse Polish notation string
 	string rpn;
 	for (string i : rpn_stack) rpn += i + " ";
 
@@ -290,125 +322,48 @@ int main(int argc, char * argv[]){
 
 	for (int i = 0; i < rpn.length(); i++){
 
-		c2 = rpn.at(i);
-		
-		if (num(c2)){
+		if (num(rpn.at(i))){
 
-			//Get the current number and move the index i
-			//to i + length of the number
+			//If l0 is a number, push it onto rpn_stack
+
 			l0 = get_double(i, rpn);
-			push(l0, out_stack);
-			show_out(v);
+			push(l0, out_stack); show_out(v);
 
-		} else {		
+		} else {
 
-			//Operators pop one or more operands from out_stack,
-			//performs the operation, then it pushes back to
-			//out_stack
-			switch(c2){
+			//Find the operator or the function in either one of two maps,
+			//check if there are enough numbers for the operation, pop operands
+			//from out_stack, obtain the function pointer (calcN op), evaluate
+			//and push the result back to out_stack
 
-				case '+': {
-					pop(l1, out_stack); pop(l2, out_stack);
-					l2 += l1;
-					push(l2, out_stack); show_out(v); break;
-				}
+			if (map1.find(rpn.at(i)) != map1.end()){
 
-				case '-': {
-					pop(l1, out_stack); pop(l2, out_stack); 
-					l2 -= l1;
-					push(l2, out_stack); show_out(v); break;
-				}
+				if (out_stack.size() < 1) fail();
+				pop(l1, out_stack);
+				calc1 op = map1.at(rpn.at(i));
+				l1 = op(l1);
+				push(l1, out_stack);
+				show_out(v);
 
-				case '*': { 
-					pop(l1, out_stack); pop(l2, out_stack);
-					l2 *= l1;
-					push(l2, out_stack); show_out(v); break;
-				}
+			} else if (map2.find(rpn.at(i)) != map2.end()){
 
-				case '/': {
-					pop(l1, out_stack); pop(l2, out_stack);
-					l2 /= l1;
-					push(l2, out_stack); show_out(v); break;
-				}
-
-				case '^': {
-					pop(l1, out_stack); pop(l2, out_stack);
-					l2 = pow(l2, l1);
-					push(l2, out_stack); show_out(v); break;
-				}
-
-				case '%': {
-					pop(l1, out_stack); pop(l2, out_stack);
-					l2 = fmod(l2, l1);
-					push(l2, out_stack); show_out(v); break;
-				}
-
-				case 'k': {
-					pop(l1, out_stack); l1 *= -1;
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'a': {
-					pop(l1, out_stack); l1 = fabs(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'b': {
-					pop(l1, out_stack); l1 = log(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'c': {
-					pop(l1, out_stack); l1 = sqrt(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'd': {
-					pop(l1, out_stack); l1 = asin(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'f': {
-					pop(l1, out_stack); l1 = acos(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'g': {
-					pop(l1, out_stack); l1 = atan(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'h': {
-					pop(l1, out_stack); l1 = sin(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'i': {
-					pop(l1, out_stack); l1 = cos(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'j': {
-					pop(l1, out_stack); l1 = tan(l1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'l': {
-					pop(l1, out_stack); l1 = tgamma(l1+1);
-					push(l1, out_stack); show_out(v); break;
-				}
-
-				case 'm': {
-					pop(l1, out_stack); pop(l2, out_stack);
-					l2 = log(l1)/log(l2);
-					push(l2, out_stack); show_out(v); break;
-				}
+				if (out_stack.size() < 2) fail();
+				pop(l1, out_stack);
+				pop(l2, out_stack);
+				calc2 op = map2.at(rpn.at(i));
+				l2 = op(l2, l1);
+				push(l2, out_stack);
+				show_out(v);
 			}
 		}
 	}
+
+	//The output stack should contain only one item, otherwise an error occured
+
+	if (out_stack.size() != 1) fail();
 	
-	//Show the result with the highest precision allowed from double
-	cout << "Result: ";
-	cout << setprecision(numeric_limits <double> ::digits10 + 1);
+	//Set the highest precision
+
+	cout << "Result: " << setprecision(numeric_limits <double> ::digits10 + 1);
 	cout << out_stack.back() << endl;
 }
