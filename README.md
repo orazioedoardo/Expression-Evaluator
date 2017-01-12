@@ -41,4 +41,4 @@ Result: 33.42284763163235
 
 ### Notes
 
-Additional functions can be esasily implemented by adding it's name and the corresponding character to the ```func``` vector and the character with the actual function pointer to either ```map1``` or ```map2``` maps, depending on the arguments number.
+Additional functions can be easily implemented by adding it's name and the corresponding character to the ```func``` vector and the character with the actual function pointer to either ```map1``` or ```map2``` maps, depending on the arguments number.
