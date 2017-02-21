@@ -96,7 +96,7 @@ void replace_una(char from, char to, string &m){
 				if (m.at(p) != ' ') break;
 			}
 			char u = m.at(p);
-			if ((get_prec(u) >= 1 && get_prec(u) <= 4) || (u == '(')){
+			if ((get_prec(u) >= 1 && get_prec(u) <= 4) || (u == '(') || (u == ',')){
 				m.at(i) = to;
 			}
 		}
