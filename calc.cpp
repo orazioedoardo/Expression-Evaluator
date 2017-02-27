@@ -136,7 +136,7 @@ string get_str(int &p, string v){
 }
 
 void fail(){
-	cout << "Invalid expression (use -h to show the help)" << endl;
+	cout << "Invalid expression" << endl;
 	exit(1);
 }
 
@@ -211,7 +211,7 @@ int main(int argc, char * argv[]){
 			//a parenthesis.
 
 			//If r0 is left associative and its precedence is <= to that of
-			//r1, mode r1 to rpn_stack (for every operator from op_stack)
+			//r1, move r1 to rpn_stack (for every operator from op_stack)
 
 			if ((get_prec(r0.at(0)) >= 1) && (get_prec(r0.at(0)) <= 3)){
 
@@ -227,7 +227,7 @@ int main(int argc, char * argv[]){
 				show_rpn(v);
 
 			//If r0 is right associative and its precedence is < to that of
-			//r1, mode r1 to rpn_stack (for every operator from op_stack)
+			//r1, move r1 to rpn_stack (for every operator from op_stack)
 
 			} else if (get_prec(r0.at(0)) >= 4){
 
