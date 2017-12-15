@@ -10,9 +10,9 @@ Result: 33.42284763163235
 ```
 
 ### Available operators
-+ + addition
-+ - subtraction
-+ * multiplication
++ \+ addition
++ \- subtraction
++ \* multiplication
 + / division
 + ! factorial
 + % modulus
@@ -41,4 +41,4 @@ Result: 33.42284763163235
 
 ### Notes
 
-Additional functions can be easily implemented by adding it's name and the corresponding character to the ```func``` vector and the character with the actual function pointer to either ```map1``` or ```map2``` map, depending on the arguments number.
+Additional functions can be easily implemented by adding its name and the corresponding character to the ```func``` vector and the character with the actual function pointer to either ```map1``` or ```map2``` map, depending on the number of arguments.
