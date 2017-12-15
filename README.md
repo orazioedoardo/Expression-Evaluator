@@ -14,6 +14,7 @@ Result: 33.42284763163235
 + \- subtraction
 + \* multiplication
 + / division
++ ^ exponentiation
 + ! factorial
 + % modulus
 
