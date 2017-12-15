@@ -38,7 +38,7 @@ Result: 33.42284763163235
 + e Euler’s constant
 
 ### Other
-+ -v to verbose mode
++ -h to show the help
 
 ### Notes
 
